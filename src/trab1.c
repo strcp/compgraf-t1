@@ -1,8 +1,7 @@
 /* Para compilar:
- * gcc teste.c -o teste -I/usr/include/opencv -lopencv_core -lopencv_imgproc
- * -lopencv_highgui -lopencv_ml -lopencv_video -lopencv_features2d
- * -lopencv_calib3d -lopencv_objdetect -lopencv_contrib -lopencv_legacy
- * -lopencv_flann */
+ * gcc trab1.c -o trab1 `pkg-config opencv --cflags --libs`
+ */
+
 #include <stdlib.h>
 #include <stdio.h>
 #include <math.h>
