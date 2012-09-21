@@ -99,9 +99,8 @@ void check_eye(IplImage *img) {
     cvReleaseImage(&tmp);
     cvReleaseImage(&tmp1);
     cvReleaseImage(&eye);
+    cvResetImageROI(img);
   }
-
-  cvResetImageROI(img);
 
   /* Desenhando retangulo em volta dos olhos encontrados com Haar cascade */
   for (i = 0; i < (eyes ? eyes->total : 0); i++) {
