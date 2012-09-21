@@ -1,5 +1,5 @@
 /* Para compilar:
- * gcc trab1.c -o trab1 `pkg-config opencv --cflags --libs`
+ * gcc trab1.c -o trab1 `pkg-config opencv --cflags --libs` -Werror -Wall -Wno-missing-braces
  */
 
 #include <stdlib.h>
@@ -13,21 +13,25 @@
 #define EYE_CASCADE "/usr/share/OpenCV/haarcascades/haarcascade_eye.xml"
 
 
-static CvScalar RED = {0, 0, 255};
-static CvScalar GREEN = {0, 255, 0};
+CvScalar RED = {0, 0, 255};
+CvScalar GREEN = {0, 255, 0};
+CvScalar BLUE = {255, 0, 0};
 
 void check_eye(IplImage *img) {
-  int i, j;
+  int i;
   CvHaarClassifierCascade *cascade;
   CvSeq *eyes;
   CvMemStorage *storage;
   CvRect *r;
   IplImage *eye;
   IplImage *im_bw;
-  IplImage *tmp, *tmp1;
-  int offset;
+  CvPoint *pt1;
+  CvPoint *pt2;
 
   cascade = (CvHaarClassifierCascade *)cvLoad(EYE_CASCADE, NULL, NULL, NULL);
+
+  pt1 = NULL;
+  pt2 = NULL;
 
   storage = cvCreateMemStorage(0);
   cvClearMemStorage(storage);
@@ -43,9 +47,21 @@ void check_eye(IplImage *img) {
       cvSize(40, 40),
       cvSize(40, 40));
 
+  pt1 = malloc(sizeof(CvPoint) * eyes->total);
+  pt2 = malloc(sizeof(CvPoint) * eyes->total);
+
   /* Itera sobre a lista de olhos encontrados pelo detector usando Haar cascade */
   for (i = 0; i < (eyes ? eyes->total : 0); i++) {
     r = (CvRect *)cvGetSeqElem(eyes, i);
+
+    /* Salva dois vértices do retangulo aonde o olho foi encontrado.
+     * Essa informaçao é utilizada mais tarde para desenhar um retangulo em
+     * volta de cada olho. */
+    pt1[i].x = r->x;
+    pt2[i].x = r->x + r->width;
+    pt1[i].y = r->y;
+    pt2[i].y = r->y+r->height;
+
     cvSetImageROI(img, *r);
     eye = cvCreateImage(cvGetSize(img), img->depth, img->nChannels);
     cvCopy(img, eye, NULL);
@@ -64,12 +80,16 @@ void check_eye(IplImage *img) {
     cvDilate(im_bw, tmp, 0, 1);
     cvErode(tmp, tmp1, 0, 1);
 
+    /* Invertendo a imagem para encontrar os contornos corretamente */
+    cvNot(tmp1, tmp);
+
     /* Encontrando contornos na imagem binarizada sem ruídos */
     CvMemStorage* storage1 = cvCreateMemStorage(0);
     CvSeq *contour = 0;
-    cvFindContours(tmp1, storage1, &contour, sizeof(CvContour), CV_RETR_CCOMP, CV_CHAIN_APPROX_SIMPLE, cvPoint(0,0));
+    cvFindContours(tmp, storage1, &contour, sizeof(CvContour), CV_RETR_CCOMP, CV_CHAIN_APPROX_SIMPLE, cvPoint(0,0));
+
     for (; contour != 0; contour = contour->h_next) {
-      cvDrawContours(img, contour, RED, RED, -1, -CV_FILLED, 8, cvPoint(0,0));
+      cvDrawContours(img, contour, RED, RED, -1, CV_FILLED, 8, cvPoint(0,0));
     }
 
     /* Cleanup */
@@ -81,6 +101,16 @@ void check_eye(IplImage *img) {
 
   cvResetImageROI(img);
   cvReleaseImage(&eye);
+
+  /* Desenhando retangulo em volta dos olhos encontrados com Haar cascade */
+  for (i = 0; i < (eyes ? eyes->total : 0); i++) {
+    cvRectangle(img, pt1[i], pt2[i], BLUE, 2, 8, 0 );
+  }
+
+  if (pt1 != NULL)
+    free(pt1);
+  if (pt2 != NULL)
+    free(pt2);
 }
 
 int main(int argc, char *argv[])
