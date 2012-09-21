@@ -121,7 +121,6 @@ int main(int argc, char *argv[])
   CvSeq *faces;
   CvRect *r;
   IplImage *faceImage;
-  IplImage *eyesImage;
   CvPoint pt1;
   CvPoint pt2;
   int i;
@@ -148,7 +147,7 @@ int main(int argc, char *argv[])
   for (i = 0; i < (faces ? faces->total : 0); i++) {
     r = (CvRect *)cvGetSeqElem(faces, i);
 
-    /* Cria dois vértices do retangulo aonde a face foi encontrada.
+    /* Salva dois vértices do retangulo aonde a face foi encontrada.
      * Essa informaçao é utilizada mais tarde para desenhar um retangulo em
      * volta da face. */
     pt1.x = r->x;
@@ -156,32 +155,30 @@ int main(int argc, char *argv[])
     pt1.y = r->y;
     pt2.y = r->y+r->height;
 
+    /* Utilizando ROI para fazer crop da imagem da face */
     cvSetImageROI(image, *r);
     faceImage = cvCreateImage(cvGetSize(image), image->depth, image->nChannels);
     cvCopy(image, faceImage, NULL);
     cvResetImageROI(image);
 
-    eyesImage = cvCreateImage(cvGetSize(image), image->depth, image->nChannels);
-    cvCopy(image, eyesImage, NULL);
-
-    check_eye(eyesImage);
+    /* Procurar e marcar os olhos encontrados */
+    check_eye(image);
   }
 
   /* Desenha um retangulo verde em volta da face detectada */
-  cvRectangle(eyesImage, pt1, pt2, GREEN, 2, 8, 0 );
+  cvRectangle(image, pt1, pt2, GREEN, 2, 8, 0 );
 
-  cvShowImage("eye", eyesImage);
+  cvShowImage("final", image);
+  cvShowImage("face", faceImage);
 
   cvWaitKey(0);
 
   /* Cleanup */
   cvReleaseImage(&image);
   cvReleaseImage(&faceImage);
-  cvReleaseImage(&eyesImage);
 
-  cvDestroyWindow("normal");
+  cvDestroyWindow("final");
   cvDestroyWindow("face");
-  cvDestroyWindow("eye");
 
   return 0;
 }
