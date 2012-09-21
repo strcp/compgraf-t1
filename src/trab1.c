@@ -62,6 +62,7 @@ void check_eye(IplImage *img) {
     pt1[i].y = r->y;
     pt2[i].y = r->y+r->height;
 
+    /* Utilizando ROI para operarmos apenas em cima da imagem do olho encontrada */
     cvSetImageROI(img, *r);
     eye = cvCreateImage(cvGetSize(img), img->depth, img->nChannels);
     cvCopy(img, eye, NULL);
@@ -97,10 +98,10 @@ void check_eye(IplImage *img) {
     cvReleaseImage(&im_bw);
     cvReleaseImage(&tmp);
     cvReleaseImage(&tmp1);
+    cvReleaseImage(&eye);
   }
 
   cvResetImageROI(img);
-  cvReleaseImage(&eye);
 
   /* Desenhando retangulo em volta dos olhos encontrados com Haar cascade */
   for (i = 0; i < (eyes ? eyes->total : 0); i++) {
