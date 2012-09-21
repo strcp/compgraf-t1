@@ -11,8 +11,6 @@
 
 #define cascade_name "/usr/share/OpenCV/haarcascades/haarcascade_frontalface_alt2.xml"
 #define eye_cascade "/usr/share/OpenCV/haarcascades/haarcascade_eye.xml"
-//#define eye_cascade "/usr/share/OpenCV/haarcascades/haarcascade_eye_tree_eyeglasses.xml"
-
 
 
 void check_eye(IplImage *img) {
@@ -21,12 +19,11 @@ void check_eye(IplImage *img) {
   CvSeq *eyes;
   /* 8-bit depth RGB representation of color red */
   static CvScalar RED = {0, 0, 255};
-  CvPoint ul;
-  CvPoint lr;
   CvMemStorage *storage;
   CvRect *r;
   IplImage *eye;
   IplImage *im_bw;
+  IplImage *tmp, *tmp1;
   int offset;
 
   /* Load the classifier data from the .xml file */
@@ -34,71 +31,72 @@ void check_eye(IplImage *img) {
 
   storage = cvCreateMemStorage(0);
   cvClearMemStorage(storage);
-  eyes = cvHaarDetectObjects(
-        img,
-        cascade,
-        storage,
-        1.1,
-        2,
-        CV_HAAR_DO_CANNY_PRUNING,
-        cvSize(40, 40),
-        cvSize(40, 40));
 
-  /* used cvHaarDetectObjects */
+  eyes = cvHaarDetectObjects(
+      img,
+      cascade,
+      storage,
+      1.1,
+      2,
+      CV_HAAR_DO_CANNY_PRUNING,
+      cvSize(40, 40),
+      cvSize(40, 40));
 
   for (i = 0; i < (eyes ? eyes->total : 0); i++) {
     r = (CvRect *)cvGetSeqElem(eyes, i);
-    ul.x = r->x;
-    ul.y = r->y;
-    lr.x = r->x + r->width;
-    lr.y = r->y + r->height;
-
     cvSetImageROI(img, *r);
     eye = cvCreateImage(cvGetSize(img), img->depth, img->nChannels);
     cvCopy(img, eye, NULL);
-    cvResetImageROI(img);
+    //    cvResetImageROI(img);
 
     IplImage *im_gray = cvCreateImage(cvGetSize(eye), IPL_DEPTH_8U, 1);
     cvCvtColor(eye, im_gray, CV_RGB2GRAY);
-    cvShowImage("gray", eye);
+    //    cvShowImage("gray", eye);
 
     im_bw = cvCreateImage(cvGetSize(im_gray), IPL_DEPTH_8U, 1);
     cvThreshold(im_gray, im_bw, 15, 255, CV_THRESH_BINARY);
+    //    cvThreshold(im_gray, im_bw, 2, 255, CV_THRESH_BINARY | CV_THRESH_OTSU);
+    //    cvThreshold(img_src, img_dest, 128, 255, CV_THRESH_BINARY | CV_THRESH_OTSU); 
 
-#if 0
-    for (i = 0; i < im_bw->height; i++) {
-      for (j = 0; j < im_bw->width; j++) {
-        offset = (i * im_bw->width);
-        printf("%d ", ((uchar *)(im_bw->imageData))[j + offset]);
-//        ((uchar *)(im_bw->imageData))[j + offset] =
-      }
-    }
-    printf("\n");
-#endif
+    //   cvRectangle(eye, ul, lr, RED, 3, 8, 0);
+
+    IplImage *tmp = cvCreateImage(cvGetSize(eye), IPL_DEPTH_8U, 1);
+    IplImage *tmp1 = cvCreateImage(cvGetSize(eye), IPL_DEPTH_8U, 1);
+    CvSeq *contour = 0;
+
+    cvDilate(im_bw, tmp, 0, 1);
+    cvErode(tmp, tmp1, 0, 1);
 
     CvMemStorage* storage1 = cvCreateMemStorage(0);
-//    cvSmooth(im_bw, im_bw, CV_GAUSSIAN, 9, 9, 3, 0);
-    CvSeq* circles = cvHoughCircles(im_bw, storage1, CV_HOUGH_GRADIENT, 4, im_bw->width/4, 100, 100, 0, 50);
-    int i;
-    for( i = 0; i < circles->total; i++ )
-    {
-      float* p = (float*)cvGetSeqElem( circles, i );
-      cvCircle(im_bw, cvPoint(cvRound(p[0]),cvRound(p[1])), 3, CV_RGB(0,255,0), -1, 8, 0 );
-      cvCircle(im_bw, cvPoint(cvRound(p[0]),cvRound(p[1])), cvRound(p[2]), CV_RGB(255,0,0), 3, 8, 0 );
+    cvFindContours(tmp1, storage1, &contour, sizeof(CvContour), CV_RETR_CCOMP, CV_CHAIN_APPROX_SIMPLE, cvPoint(0,0));
+    for ( ; contour != 0; contour = contour->h_next) {
+      cvDrawContours(img, contour, RED, RED, -1, -CV_FILLED, 8, cvPoint(0,0));
     }
 
-    cvShowImage("bw", im_bw);
+#if 0
+    cvSmooth(tmp1, im_bw, CV_GAUSSIAN, 9, 9, 3, 0);
+    CvSeq* circles = cvHoughCircles(tmp1, storage1, CV_HOUGH_GRADIENT, 4, tmp1->width/4, 100, 100, 1, 50);
+    int i;
+    for (i = 0; i < circles->total; i++) {
+      float *p = (float *)cvGetSeqElem(circles, i);
+      //      cvCircle(im_bw, cvPoint(cvRound(p[0]),cvRound(p[1])), 3, CV_RGB(0,255,0), -1, 8, 0 );
+      //cvCircle(im_bw, cvPoint(cvRound(p[0]), cvRound(p[1])), cvRound(p[2]), CV_RGB(255, 0, 0), 3, 8, 0 );
+      cvCircle(tmp1, cvPoint(cvRound(p[0]), cvRound(p[1])), cvRound(p[2]), CV_RGB(255, 0, 0), 3, 8, 0 );
+    }
+#endif
 
-    cvWaitKey(0);
     cvReleaseImage(&im_gray);
     cvReleaseImage(&im_bw);
-    cvReleaseImage(&eye);
-
-    cvDestroyWindow("gray");
-    cvDestroyWindow("bw");
-
-//    cvRectangle(img, ul, lr, RED, 3, 8, 0);
   }
+  cvResetImageROI(img);
+  cvReleaseImage(&eye);
+  /*
+  cvShowImage("img", img);
+
+  cvWaitKey(0);
+
+  cvDestroyWindow("img");
+  */
 
 }
 
@@ -112,6 +110,9 @@ int main(int argc, char *argv[])
   CvRect *r;
   IplImage *faceImage;
   IplImage *eyesImage;
+  CvPoint pt1;
+  CvPoint pt2;
+
 
 
   /* Load the classifier data from the .xml file */
@@ -127,18 +128,24 @@ int main(int argc, char *argv[])
   storage = cvCreateMemStorage(0);
   cvClearMemStorage(storage);
   faces = cvHaarDetectObjects(
-        image,
-        cascade,
-        storage,
-        1.1,
-        2,
-        CV_HAAR_DO_CANNY_PRUNING,
-        cvSize(40, 40),
-        cvSize(40, 40));
+      image,
+      cascade,
+      storage,
+      1.1,
+      2,
+      CV_HAAR_DO_CANNY_PRUNING,
+      cvSize(40, 40),
+      cvSize(40, 40));
 
   /* go through all the detected faces, and draw them into the input image */
   for (i = 0; i < (faces ? faces->total : 0); i++) {
     r = (CvRect *)cvGetSeqElem(faces, i);
+
+    pt1.x = r->x;
+    pt2.x = r->x + r->width;
+    pt1.y = r->y;
+    pt2.y = r->y+r->height;
+
 
     cvSetImageROI(image, *r);
     faceImage = cvCreateImage(cvGetSize(image), image->depth, image->nChannels);
@@ -152,8 +159,9 @@ int main(int argc, char *argv[])
   }
 
   /* show the result and wait for a keystroke form user before finishing */
-  cvShowImage("normal", image);
-  cvShowImage("face", faceImage);
+  // Draw the rectangle in the input image
+  cvRectangle(eyesImage, pt1, pt2, CV_RGB(0,255,0), 3, 8, 0 );
+
   cvShowImage("eye", eyesImage);
 
 
