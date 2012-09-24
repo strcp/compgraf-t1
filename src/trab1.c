@@ -17,6 +17,8 @@ CvScalar RED = {0, 0, 255};
 CvScalar GREEN = {0, 255, 0};
 CvScalar BLUE = {255, 0, 0};
 
+/* Esta funcao recebe uma imagem para encontrar olhos nela */
+
 void check_eye(IplImage *img) {
   int i;
   CvHaarClassifierCascade *cascade;
@@ -28,6 +30,7 @@ void check_eye(IplImage *img) {
   CvPoint *pt1;
   CvPoint *pt2;
 
+  /* Carrega estrutura treinada para deteccao de olho */
   cascade = (CvHaarClassifierCascade *)cvLoad(EYE_CASCADE, NULL, NULL, NULL);
 
   pt1 = NULL;
@@ -69,16 +72,26 @@ void check_eye(IplImage *img) {
 
     /* FIXME: Precisamos de uma imagem cinza para binarizar? */
     IplImage *im_gray = cvCreateImage(cvGetSize(eye), IPL_DEPTH_8U, 1);
-    cvCvtColor(eye, im_gray, CV_RGB2GRAY);
+    cvCvtColor(eye, im_gray,
+      CV_RGB2GRAY //Color space conversion code
+    );
 
     /* Binarizando a imagem */
     im_bw = cvCreateImage(cvGetSize(im_gray), IPL_DEPTH_8U, 1);
-    cvThreshold(im_gray, im_bw, 15, 255, CV_THRESH_BINARY);
+    cvThreshold(
+        im_gray,          //src
+        im_bw,            //dst
+        15,               //threshold (valores maiores disso viram max_value)
+        255,              //max value
+        CV_THRESH_BINARY  //thresholding type
+        );
 
     /* Remoçao de ruídos Dilate + Erode */
     IplImage *tmp = cvCreateImage(cvGetSize(eye), IPL_DEPTH_8U, 1);
     IplImage *tmp1 = cvCreateImage(cvGetSize(eye), IPL_DEPTH_8U, 1);
+    /* Maximiza a area clara da imagem para remover ruidos */
     cvDilate(im_bw, tmp, 0, 1);
+    /* Maximiza a area escura da imagem */
     cvErode(tmp, tmp1, 0, 1);
 
     /* Invertendo a imagem para encontrar os contornos corretamente */
@@ -87,8 +100,10 @@ void check_eye(IplImage *img) {
     /* Encontrando contornos na imagem binarizada sem ruídos */
     CvMemStorage* storage1 = cvCreateMemStorage(0);
     CvSeq *contour = 0;
+    //TODO: Entender direito esses parametros
     cvFindContours(tmp, storage1, &contour, sizeof(CvContour), CV_RETR_CCOMP, CV_CHAIN_APPROX_SIMPLE, cvPoint(0,0));
 
+    /* Pinta e vermelho cada contorno encontrado */
     for (; contour != 0; contour = contour->h_next) {
       cvDrawContours(img, contour, RED, RED, -1, CV_FILLED, 8, cvPoint(0,0));
     }
@@ -131,17 +146,18 @@ int main(int argc, char *argv[])
   storage = cvCreateMemStorage(0);
   cvClearMemStorage(storage);
 
+  /* Carrega o xml com dados treinados para deteccao de face */
   cascade = (CvHaarClassifierCascade *)cvLoad(FACE_CASCADE, NULL, NULL, NULL);
   /* Utiliza Haar cascade para localizar as faces na imagem */
   faces = cvHaarDetectObjects(
       image,
       cascade,
       storage,
-      1.1,
-      2,
-      CV_HAAR_DO_CANNY_PRUNING,
-      cvSize(40, 40),
-      cvSize(40, 40));
+      1.1,  //scaleFactor
+      2,    //minNeighbors
+      CV_HAAR_DO_CANNY_PRUNING, //flags
+      cvSize(40, 40),   //minSize
+      cvSize(40, 40));  //maxSize
 
   /* Itera sobre a lista de faces encontradas pelo detector usando Haar cascade */
   for (i = 0; i < (faces ? faces->total : 0); i++) {
@@ -166,7 +182,14 @@ int main(int argc, char *argv[])
   }
 
   /* Desenha um retangulo verde em volta da face detectada */
-  cvRectangle(image, pt1, pt2, GREEN, 2, 8, 0 );
+  cvRectangle(image, pt1, pt2, GREEN,
+    2, //Espessura das arestas. Valor negativo como o CV_FILLED fazem com que a funcao preencha o retangulo com a cor especificada.
+    8, /* Tipo de linha
+          8 - 8-connected line
+          4 - 4-connected line
+          CV_AA - antialiased line */
+    0 // Numero de bits fracionarios nas coordenadas do ponto
+    );
 
   cvShowImage("final", image);
   cvShowImage("face", faceImage);
