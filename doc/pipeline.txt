@@ -1,0 +1,22 @@
+Carregar Imagem
+Carregar xml Haar para detecção de face
+Utilizar xml para detectar a face na imagem
+Para cada face encontrada, usar xml para detectar os
+	Carregar xml Haar para detecção de olhos
+	Utilizar xml para detectar os olhos na face
+	para cada olho detectado
+		Setar a ROI na região detectada
+		copiar a imagem
+		converter a imagem para cinza
+		binarizar a imagem usando treshold=15
+		Remover ruídos
+			Dilate
+			Erode
+		Inverter as cores da imagem para que o contorno seja na iris e não na esclera
+		Encontrar contornos
+		Para cada contorno encontrado
+			pintar contorno
+	para cada região de olho encontrado
+		Pintar de verde as bordas
+Para cada região de face encontrada
+	pintar de verde as bordas
