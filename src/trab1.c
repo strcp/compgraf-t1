@@ -9,8 +9,8 @@
 #include <cv.h>
 #include <highgui.h>
 
-#define FACE_CASCADE "/usr/share/OpenCV/haarcascades/haarcascade_frontalface_alt2.xml"
-#define EYE_CASCADE "/usr/share/OpenCV/haarcascades/haarcascade_eye.xml"
+#define FACE_CASCADE "haar/haarcascade_frontalface_alt2.xml"
+#define EYE_CASCADE "haar/haarcascade_eye.xml"
 
 
 CvScalar RED = {0, 0, 255};
